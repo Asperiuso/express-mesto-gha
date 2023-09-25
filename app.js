@@ -1,13 +1,13 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-
+const { PORT = 3000, MONGODB_URI = 'mongodb://127.0.0.1:27017/mestodb' } = process.env; //добавил для теста, но не понимаю почему нельзя использовать окружение .env
 const app = express();
 const dotenv = require('dotenv');
 
 dotenv.config();
 
-mongoose.connect(process.env.MONGODB_URI, {
+mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
 });
 
@@ -30,6 +30,6 @@ app.use((req, res) => {
   res.status(process.env.NOT_FOUND).send({ message: 'Путь не найден' });
 });
 
-app.listen(process.env.PORT, () => {
+app.listen(PORT, () => {
   console.log(`Сервер работает на PORT: ${process.env.PORT}`);
 });
