@@ -13,7 +13,7 @@ module.exports.getUsers = async (req, res) => {
 
 module.exports.getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId).fail();
+    const user = await User.findById(req.params.userId).orFail();
     res.send({ data: user });
   } catch (err) {
     if (err instanceof CastError) {
@@ -48,7 +48,7 @@ module.exports.updateUserInfo = async (req, res) => {
   const { name, about } = req.body;
 
   try {
-    const user = await User.Id(userId, { name, about }, { new: true, runValidators: true }).fail();
+    const user = await User.findByIdAndUpdate(userId, { name, about }, { new: true, runValidators: true }).orFail();
     res.send({ data: user });
   } catch (err) {
     if (err instanceof DocumentNotFoundError) {
@@ -68,7 +68,7 @@ module.exports.updateUserAvatar = async (req, res) => {
   const { avatar } = req.body;
 
   try {
-    const user = await User.Id(userId, { avatar }, { new: true, runValidators: true }).fail();
+    const user = await User.findByIdAndUpdate(userId, { avatar }, { new: true, runValidators: true }).orFail();
     res.send({ data: user });
   } catch (err) {
     if (err instanceof DocumentNotFoundError) {
