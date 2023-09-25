@@ -1,8 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-
-const { PORT = 3000, MONGODB_URI = 'mongodb://127.0.0.1:27017/mestodb' } = process.env; // добавил для теста, но не понимаю почему нельзя использовать окружение .env
+const { PORT = 3000, MONGODB_URI = 'mongodb://127.0.0.1:27017/mestodb' } = process.env; // Добавил для теста, но не понимаю почему нельзя использовать окружение .env
 const app = express();
 const dotenv = require('dotenv');
 const { NOT_FOUND } = require('./utils/constants');

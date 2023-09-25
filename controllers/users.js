@@ -56,7 +56,7 @@ module.exports.updateUserInfo = async (req, res) => {
       return;
     }
     if (err instanceof ValidationError || err instanceof CastError) {
-      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обновления профиля' });
+      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обнавления профиля' });
       return;
     }
     res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
