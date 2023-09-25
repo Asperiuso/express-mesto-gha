@@ -48,7 +48,9 @@ module.exports.updateUserInfo = async (req, res) => {
   const { name, about } = req.body;
 
   try {
+    /* eslint-disable max-len */
     const user = await User.findByIdAndUpdate(userId, { name, about }, { new: true, runValidators: true }).orFail();
+    /* eslint-enable max-len */
     res.send({ data: user });
   } catch (err) {
     if (err instanceof DocumentNotFoundError) {
@@ -68,7 +70,9 @@ module.exports.updateUserAvatar = async (req, res) => {
   const { avatar } = req.body;
 
   try {
+    /* eslint-disable max-len */
     const user = await User.findByIdAndUpdate(userId, { avatar }, { new: true, runValidators: true }).orFail();
+    /* eslint-enable max-len */
     res.send({ data: user });
   } catch (err) {
     if (err instanceof DocumentNotFoundError) {
