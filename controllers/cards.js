@@ -1,4 +1,4 @@
-const { CastError, ValidationError, DocumentNotFoundError } = require('mongoose').Error;
+const { CastError, DocumentNotFoundError } = require('mongoose').Error;
 const { BAD_REQUEST, NOT_FOUND, INTERNAL_SERVER_ERROR } = require('../utils/constants');
 const Card = require('../models/card');
 
@@ -19,10 +19,6 @@ module.exports.createCard = async (req, res) => {
     const card = await Card.create({ name, link, owner: userId });
     res.send({ data: card });
   } catch (err) {
-    if (err instanceof ValidationError) {
-      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе создания карточки' });
-      return;
-    }
     res.status(INTERNAL_SERVER_ERROR).send({ message: err.name });
   }
 };
@@ -51,7 +47,7 @@ module.exports.likeCard = async (req, res) => {
     const card = await Card.findByIdAndUpdate(
       req.params.cardId,
       { $addToSet: { likes: userId } },
-      { new: true, runValidators: true },
+      { new: true }
     ).orFail();
     res.send({ data: card });
   } catch (err) {
@@ -59,8 +55,8 @@ module.exports.likeCard = async (req, res) => {
       res.status(NOT_FOUND).send({ message: `Запрашиваемая карточка с ID ${req.params.cardId} не найдена` });
       return;
     }
-    if (err instanceof ValidationError || err instanceof CastError) {
-      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе проставления лайка' });
+    if (err instanceof CastError) {
+      res.status(BAD_REQUEST).send({ message: `Передан некорректный ID карточки: ${req.params.cardId}` });
       return;
     }
     res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
@@ -74,7 +70,7 @@ module.exports.dislikeCard = async (req, res) => {
     const card = await Card.findByIdAndUpdate(
       req.params.cardId,
       { $pull: { likes: userId } },
-      { new: true, runValidators: true },
+      { new: true }
     ).orFail();
     res.send({ data: card });
   } catch (err) {
@@ -82,8 +78,8 @@ module.exports.dislikeCard = async (req, res) => {
       res.status(NOT_FOUND).send({ message: `Запрашиваемая карточка с ID ${req.params.cardId} не найдена` });
       return;
     }
-    if (err instanceof ValidationError || err instanceof CastError) {
-      res.status(BAD_REQUEST).send({ message: 'Некорректные данные для метода снятия лайка' });
+    if (err instanceof CastError) {
+      res.status(BAD_REQUEST).send({ message: `Передан некорректный ID карточки: ${req.params.cardId}` });
       return;
     }
     res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
