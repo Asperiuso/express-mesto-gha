@@ -57,7 +57,7 @@ module.exports.updateUserInfo = async (req, res) => {
       res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${userId} не найден` });
       return;
     }
-    if (err instanceof ValidationError || err instanceof CastError) {
+    if (err instanceof ValidationError) {
       res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обнавления профиля' });
       return;
     }
@@ -79,7 +79,7 @@ module.exports.updateUserAvatar = async (req, res) => {
       res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${userId} не найден` });
       return;
     }
-    if (err instanceof ValidationError || err instanceof CastError) {
+    if (err instanceof ValidationError) {
       res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обновления аватара' });
       return;
     }
