@@ -59,7 +59,7 @@ module.exports.likeCard = async (req, res) => {
       res.status(NOT_FOUND).send({ message: `Запрашиваемая карточка с ID ${req.params.cardId} не найдена` });
       return;
     }
-    if (err instanceof ValidationError || err instanceof CastError) {
+    if (err instanceof CastError) {
       res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе проставления лайка' });
       return;
     }
@@ -82,7 +82,7 @@ module.exports.dislikeCard = async (req, res) => {
       res.status(NOT_FOUND).send({ message: `Запрашиваемая карточка с ID ${req.params.cardId} не найдена` });
       return;
     }
-    if (err instanceof ValidationError || err instanceof CastError) {
+    if (err instanceof CastError) {
       res.status(BAD_REQUEST).send({ message: 'Некорректные данные для метода снятия лайка' });
       return;
     }
