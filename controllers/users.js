@@ -1,4 +1,4 @@
-const { ValidationError, DocumentNotFoundError } = require('mongoose').Error;
+const { CastError, ValidationError, DocumentNotFoundError } = require('mongoose').Error;
 const { BAD_REQUEST, NOT_FOUND, INTERNAL_SERVER_ERROR } = require('../utils/constants');
 const User = require('../models/user');
 
@@ -16,6 +16,10 @@ module.exports.getUser = async (req, res) => {
     const user = await User.findById(req.params.userId).orFail();
     res.send({ data: user });
   } catch (err) {
+    if (err instanceof CastError) {
+      res.status(BAD_REQUEST).send({ message: `Передан некорректный ID пользователя: ${req.params.userId}` });
+      return;
+    }
     if (err instanceof DocumentNotFoundError) {
       res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${req.params.userId} не найден` });
       return;
@@ -53,6 +57,10 @@ module.exports.updateUserInfo = async (req, res) => {
       res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${userId} не найден` });
       return;
     }
+    if (err instanceof ValidationError || err instanceof CastError) {
+      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обнавления профиля' });
+      return;
+    }
     res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
   }
 };
@@ -69,6 +77,10 @@ module.exports.updateUserAvatar = async (req, res) => {
   } catch (err) {
     if (err instanceof DocumentNotFoundError) {
       res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${userId} не найден` });
+      return;
+    }
+    if (err instanceof ValidationError || err instanceof CastError) {
+      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обновления аватара' });
       return;
     }
     res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
