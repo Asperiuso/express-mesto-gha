@@ -23,13 +23,13 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(process.env.USERS_ROUTE, require('./routes/users'));
-app.use(process.env.CARDS_ROUTE, require('./routes/cards'));
+app.use('/users', require('./routes/users'));
+app.use('/cards', require('./routes/cards'));
 
 app.use((req, res) => {
   res.status(NOT_FOUND).send({ message: 'Путь не найден' });
 });
 
 app.listen(PORT, () => {
-  console.log(`Сервер работает на PORT: ${process.env.PORT}`);
+  console.log(`Сервер работает на PORT: ${PORT}`);
 });
