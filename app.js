@@ -5,7 +5,7 @@ const { errors } = require('celebrate');
 
 const { PORT = 3000, MONGODB_URI = 'mongodb://127.0.0.1:27017/mestodb' } = process.env;
 
-const { auth } = require('./middlewares/auth');
+const auth = require('./middlewares/auth');
 const errorHandler = require('./middlewares/error-handler');
 const userRoute = require('./routes/users');
 const cardRoute = require('./routes/cards');
@@ -26,9 +26,11 @@ app.use(cookieParser());
 app.post('/signin', validationLogin, login);
 app.post('/signup', validationUser, createUser);
 
-app.use(auth, userRoute);
-app.use(auth, cardRoute);
-app.use('*', auth, (req, res, next) => next(new NotFoundError('Страница не существует')));
+app.use(auth);
+
+app.use(userRoute);
+app.use(cardRoute);
+app.use('*', (req, res, next) => next(new NotFoundError('Страница не существует')));
 
 app.use(errors());
 
