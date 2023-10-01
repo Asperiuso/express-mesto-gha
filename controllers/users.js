@@ -8,6 +8,7 @@ const {
   INTERNAL_SERVER_ERROR,
   UNAUTHORIZED,
   SECRET_KEY,
+  CONFLICT,
   OK_CREATED,
   OK_STATUS,
 } = require('../utils/constants');
@@ -31,8 +32,13 @@ module.exports.createUser = async (req, res) => {
       email,
       password: hashedPassword,
     });
-    res.send({ data: user });
+    res.status(OK_CREATED).send({ data: user });
   } catch (err) {
+    if (err.code === 11000) {
+      // Обработка ошибки конфликта (пользователь с таким email уже существует)
+      res.status(CONFLICT).send({ message: 'Пользователь с таким email уже существует' });
+      return;
+    }
     if (err.name === 'ValidationError') {
       res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе создания пользователя' });
     } else {
@@ -61,7 +67,7 @@ module.exports.login = async (req, res) => {
       httpOnly: true,
       secure: true,
     });
-    res.send({ token });
+    res.status(OK_STATUS).send({ token });
   } catch (err) {
     res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
   }
