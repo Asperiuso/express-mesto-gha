@@ -31,12 +31,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     minlength: 2,
     maxlength: 30,
-    required: true,
     default: 'Исследователь',
+    validate: {
+      validator: ({ length }) => length >= 2 && length <= 30,
+    },
   },
   avatar: {
     type: String,
-    required: true,
     default: 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
     validate: {
       validator: (url) => URL_PATTERN.test(url),
