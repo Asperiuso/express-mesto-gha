@@ -80,5 +80,3 @@ module.exports.dislikeCard = (req, res, next) => {
       return next(err);
     });
 };
-
-module.exports.handleError = require('../middlewares/error-handler');
