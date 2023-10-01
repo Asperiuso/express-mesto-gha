@@ -39,38 +39,30 @@ module.exports.createUser = async (req, res, next) => {
       email: user.email,
     });
   } catch (err) {
-    if (err instanceof ConflictError) {
-      res.status(err.statusCode).send({ message: err.message });
-    } else if (err instanceof BadRequestError) {
-      res.status(err.statusCode).send({ message: err.message });
-    } else {
-      next(err);
+    if (err.name === 'ValidationError') {
+      return next(new BadRequestError('Переданы некорректные данные'));
     }
+    if (err.code === 11000) {
+      return next(new ConflictError('Пользователь уже существует'));
+    }
+    next(err);
   }
+  return undefined;
 };
 
 module.exports.login = async (req, res, next) => {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      const unauthorizedError = new UnauthorizedError('Неправильные почта или пароль');
-      res.status(unauthorizedError.statusCode).send({ message: unauthorizedError.message });
-      return;
+      throw new UnauthorizedError('Неправильные почта или пароль');
     }
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      const unauthorizedError = new UnauthorizedError('Неправильные почта или пароль');
-      res.status(unauthorizedError.statusCode).send({ message: unauthorizedError.message });
-      return;
+      throw new UnauthorizedError('Неправильные почта или пароль');
     }
     const token = jwt.sign({ _id: user._id }, SECRET_KEY, { expiresIn: '7d' });
-    // токен в cookie
-    res.cookie('jwt', token, {
-      maxAge: 7 * 24 * 60 * 60 * 1000, // Время жизни токена в миллисекундах (7 дней)
-      httpOnly: true,
-      secure: true,
-    });
+    res.cookie('jwt', token, { maxAge: 3600000 * 24 * 7, httpOnly: true, sameSite: true });
     res.status(OK_STATUS).send({ token });
   } catch (err) {
     next(err);

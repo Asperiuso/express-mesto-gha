@@ -1,13 +1,6 @@
 const { celebrate, Joi } = require('celebrate');
 const { URL_PATTERN } = require('./constants');
 
-module.exports.validationLogin = celebrate({
-  body: Joi.object().keys({
-    email: Joi.string().required().email(),
-    password: Joi.string().required().min(8),
-  }),
-});
-
 module.exports.validationUser = celebrate({
   body: Joi.object().keys({
     email: Joi.string().required().email(),
@@ -15,6 +8,13 @@ module.exports.validationUser = celebrate({
     name: Joi.string().min(2).max(30),
     about: Joi.string().min(2).max(30),
     avatar: Joi.string().regex(URL_PATTERN),
+  }),
+});
+
+module.exports.validationLogin = celebrate({
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    password: Joi.string().required().min(8),
   }),
 });
 
