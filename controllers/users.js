@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { CastError, ValidationError, DocumentNotFoundError } = require('mongoose').Error;
+const { validationResult } = require('express-validator');
+const { CastError, DocumentNotFoundError } = require('mongoose').Error;
 const {
   BAD_REQUEST,
   NOT_FOUND,
@@ -14,25 +15,20 @@ module.exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Поиск пользователя по email
     const user = await User.findOne({ email }).select('+password');
 
-    // Если пользователь не найден или пароль не совпадает, вернуть ошибку 401 (UNAUTHORIZED)
     if (!user || !await bcrypt.compare(password, user.password)) {
       return res.status(UNAUTHORIZED).send({ message: 'Неправильные почта или пароль' });
     }
 
-    // Создать JWT токен
     const token = jwt.sign({ _id: user._id }, '259f0c489d8b65197882c5faa2e5dcc026be7d1ecb88153c87e5ac53b09f392f', { expiresIn: '7d' });
 
-    // Отправить токен в httpOnly куку
     res.cookie('jwt', token, {
-      maxAge: 7 * 24 * 60 * 60 * 1000, // Срок действия куки в миллисекундах (7 дней)
+      maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: true,
       sameSite: 'strict',
     });
 
-    // Отправить успешный ответ
     return res.send({ message: 'Авторизация прошла успешно' });
   } catch (err) {
     return res.status(INTERNAL_SERVER_ERROR).send({ message: 'Ошибка при попытке авторизации' });
@@ -46,9 +42,9 @@ module.exports.getCurrentUser = (req, res) => {
 module.exports.getUsers = async (req, res) => {
   try {
     const users = await User.find({});
-    res.send({ data: users });
+    return res.send({ data: users });
   } catch (error) {
-    res.status(INTERNAL_SERVER_ERROR).send({ message: 'Ошибка при запросе пользователей' });
+    return res.status(INTERNAL_SERVER_ERROR).send({ message: 'Ошибка при запросе пользователей' });
   }
 };
 
@@ -73,23 +69,28 @@ module.exports.createUser = async (req, res) => {
   const {
     name = 'Жак-Ив Кусто',
     about = 'Исследователь',
-    avatar = 'ссылка',
+    avatar = 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
     email,
     password,
   } = req.body;
 
   try {
-    // Хешируем пароль перед сохранением в базу данных
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({ name, about, avatar, email, password: hashedPassword });
-    res.send({ data: user });
+    const user = await User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hashedPassword,
+    });
+
+    return res.send({ data: user });
   } catch (err) {
-    if (err instanceof ValidationError) {
-      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе создания пользователя' });
-      return;
+    if (err instanceof validationResult) {
+      return res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе создания пользователя' });
     }
-    res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
+    return res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
   }
 };
 
@@ -103,13 +104,11 @@ module.exports.updateUserInfo = async (req, res) => {
   } catch (err) {
     if (err instanceof DocumentNotFoundError) {
       res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${userId} не найден` });
-      return;
+    } else if (err instanceof validationResult) {
+      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обновления профиля' });
+    } else {
+      res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
     }
-    if (err instanceof ValidationError) {
-      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обнавления профиля' });
-      return;
-    }
-    res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
   }
 };
 
@@ -123,12 +122,10 @@ module.exports.updateUserAvatar = async (req, res) => {
   } catch (err) {
     if (err instanceof DocumentNotFoundError) {
       res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${userId} не найден` });
-      return;
-    }
-    if (err instanceof ValidationError) {
+    } else if (err instanceof validationResult) {
       res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обновления аватара' });
-      return;
+    } else {
+      res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
     }
-    res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
   }
 };
