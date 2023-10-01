@@ -15,58 +15,55 @@ const {
   OK_STATUS,
 } = require('../utils/constants');
 
-module.exports.createUser = async (req, res, next) => {
+module.exports.createUser = (req, res, next) => {
   const {
-    name,
-    about,
-    avatar,
-    email,
-    password,
+    name, about, avatar, email, password,
   } = req.body;
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({
+
+  bcrypt.hash(password, 10)
+    .then((hash) => User.create({
       name,
       about,
       avatar,
       email,
-      password: hashedPassword,
-    });
-    res.status(OK_CREATED).send({
+      password: hash,
+    }))
+    .then((user) => res.status(OK_CREATED).send({
       name: user.name,
       about: user.about,
       avatar: user.avatar,
       email: user.email,
+    }))
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        return next(new BadRequestError('Переданы некорректные данные'));
+      }
+      if (err.code === 11000) {
+        return next(new ConflictError('Пользователь уже существует'));
+      }
+      return next(err);
     });
-  } catch (err) {
-    if (err.name === 'ValidationError') {
-      return next(new BadRequestError('Переданы некорректные данные'));
-    }
-    if (err.code === 11000) {
-      return next(new ConflictError('Пользователь уже существует'));
-    }
-    next(err);
-  }
-  return undefined;
 };
 
-module.exports.login = async (req, res, next) => {
+module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
-  try {
-    const user = await User.findOne({ email }).select('+password');
-    if (!user) {
-      throw new UnauthorizedError('Неправильные почта или пароль');
-    }
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      throw new UnauthorizedError('Неправильные почта или пароль');
-    }
-    const token = jwt.sign({ _id: user._id }, SECRET_KEY, { expiresIn: '7d' });
-    res.cookie('jwt', token, { maxAge: 3600000 * 24 * 7, httpOnly: true, sameSite: true });
-    res.status(OK_STATUS).send({ token });
-  } catch (err) {
-    next(err);
-  }
+
+  return User.findOne({ email }).select('+password')
+    .then((user) => {
+      if (!user) {
+        return next(new UnauthorizedError('Неправильные почта или пароль'));
+      }
+      return bcrypt.compare(password, user.password)
+        .then((matched) => {
+          if (!matched) {
+            return next(new UnauthorizedError('Неправильные почта или пароль'));
+          }
+          const token = jwt.sign({ _id: user._id }, SECRET_KEY, { expiresIn: '7d' });
+          res.cookie('jwt', token, { maxAge: 3600000 * 24 * 7, httpOnly: true, sameSite: true });
+          return res.status(OK_STATUS).send({ token });
+        });
+    })
+    .catch((err) => next(err));
 };
 
 module.exports.getUsers = async (req, res, next) => {
