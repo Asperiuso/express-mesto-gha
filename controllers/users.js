@@ -84,7 +84,7 @@ module.exports.getUsers = (req, res, next) => {
     .catch((err) => next(err));
 };
 
-module.exports.getCurrentUserInfo = (req, res, next) => {
+module.exports.getCurrentUser = (req, res, next) => {
   User.findOne({ _id: req.user._id }).orFail().then((users) => res.send(users)).catch((err) => {
     next(err);
   });
@@ -103,7 +103,7 @@ module.exports.getUser = (req, res, next) => {
     });
 };
 
-const updateUser = (req, res, next, data) => {
+const updateUserInfo = (req, res, next, data) => {
   User.findOneAndUpdate({ _id: req.user._id }, data, {
     new: true,
     runValidators: true,
@@ -120,14 +120,14 @@ const updateUser = (req, res, next, data) => {
     });
 };
 
-module.exports.updateUser = (req, res, next) => {
+module.exports.updateUserInfo = (req, res, next) => {
   const { name, about } = req.body;
 
-  return updateUser(req, res, next, { name, about });
+  return updateUserInfo(req, res, next, { name, about });
 };
 
 module.exports.updateUserAvatar = (req, res, next) => {
   const { avatar } = req.body;
 
-  return updateUser(req, res, next, { avatar });
+  return updateUserInfo(req, res, next, { avatar });
 };
