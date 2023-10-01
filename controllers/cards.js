@@ -3,7 +3,7 @@ const {
   BAD_REQUEST,
   NOT_FOUND,
   INTERNAL_SERVER_ERROR,
-  FORBIDDEN,
+  UNAUTHORIZED,
 } = require('../utils/constants');
 const Card = require('../models/card');
 
@@ -38,7 +38,7 @@ module.exports.removeCard = async (req, res) => {
 
     // Проверяем, что текущий пользователь является владельцем карточки
     if (card.owner.toString() !== req.user._id) {
-      return res.status(FORBIDDEN).send({ message: 'У вас нет прав на удаление этой карточки' });
+      return res.status(UNAUTHORIZED).send({ message: 'У вас нет прав на удаление этой карточки' });
     }
 
     // Если проверка пройдена, удаляем карточку
