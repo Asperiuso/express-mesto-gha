@@ -5,11 +5,11 @@ const auth = require('../middlewares/auth');
 const {
   getUsers,
   getUser,
-  createUser,
   getCurrentUser,
   updateUserInfo,
   updateUserAvatar,
-  login, // Импортируйте контроллер логина
+  signup,
+  signin, // Импортируйте контроллер логина
 } = require('../controllers/users');
 
 router.get('/', getUsers);
@@ -20,8 +20,8 @@ router.get('/:userId', celebrate({
   }),
 }), getUser);
 
-router.post('/', createUser);
-router.post('/login', login); // Добавьте маршрут для логина
+router.post('/', signup);
+router.post('/login', signin); // Добавьте маршрут для логина
 
 router.patch('/me', celebrate({
   body: Joi.object().keys({
