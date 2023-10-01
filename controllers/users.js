@@ -2,10 +2,6 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { CastError, ValidationError, DocumentNotFoundError } = require('mongoose').Error;
 const {
-  BAD_REQUEST,
-  NOT_FOUND,
-  UNAUTHORIZED,
-  INTERNAL_SERVER_ERROR,
   SECRET_KEY,
   OK_STATUS,
   OK_CREATED,
@@ -13,31 +9,43 @@ const {
 
 const User = require('../models/user');
 
-module.exports.signin = async (req, res) => {
+const NotFound = require('../utils/errors/NotFound');
+const BadRequest = require('../utils/errors/BadRequest');
+const Conflict = require('../utils/errors/Conflict');
+const Unauthorized = require('../utils/errors/Unauthorized');
+
+module.exports.signin = (req, res, next) => {
   const { email, password } = req.body;
 
-  try {
-    const user = await User.findOne({ email }).select('+password');
+  User.findOne({ email }).select('+password')
+    .orFail()
+    .then((user) => {
+      bcrypt.compare(password, user.password, (err, result) => {
+        if (!result) {
+          next(new Unauthorized('Неправильный email или пароль'));
+        } else {
+          const token = jwt.sign({ _id: user._id }, SECRET_KEY, { expiresIn: '7d' });
 
-    if (!user || !await bcrypt.compare(password, user.password)) {
-      return res.status(UNAUTHORIZED).send({ message: 'Неправильные почта или пароль' });
-    }
-
-    const token = jwt.sign({ _id: user._id }, SECRET_KEY, { expiresIn: '7d' });
-
-    res.cookie('jwt', token, {
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      httpOnly: true,
-      sameSite: 'strict',
+          // токен в куки браузера
+          res.cookie('jwt', token, {
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            httpOnly: true,
+          }).send({ token });
+        }
+      });
+    })
+    .catch((err) => {
+      if (err instanceof DocumentNotFoundError) {
+        next(new Unauthorized('Неправильный email или пароль'));
+      } else if (err instanceof CastError) {
+        next(new BadRequest('Переданы некорректные данные'));
+      } else {
+        next(err);
+      }
     });
-
-    return res.send({ message: 'Авторизация прошла успешно' });
-  } catch (err) {
-    return res.status(INTERNAL_SERVER_ERROR).send({ message: 'Ошибка при попытке авторизации' });
-  }
 };
 
-module.exports.signup = async (req, res) => {
+module.exports.signup = (req, res, next) => {
   const {
     name,
     about,
@@ -46,88 +54,80 @@ module.exports.signup = async (req, res) => {
     password,
   } = req.body;
 
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      name,
-      about,
-      avatar,
-      email,
-      password: hashedPassword,
+  bcrypt.hash(password, 10)
+    .then((hash) => {
+      User.create({
+        name,
+        about,
+        avatar,
+        email,
+        password: hash,
+      })
+        .then(() => res.status(OK_CREATED).send({
+          name, about, avatar, email,
+        }))
+        .catch((err) => {
+          if (err.code === 11000) {
+            next(new Conflict('Email уже зарегестриован'));
+          } else if (err instanceof ValidationError) {
+            next(new BadRequest('Переданы некорректные данные'));
+          } else {
+            next(err);
+          }
+        });
     });
-
-    return res.status(OK_CREATED).send({ data: user });
-  } catch (err) {
-    if (err instanceof ValidationError) {
-      return res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе создания пользователя' });
-    }
-    return res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
-  }
 };
 
-module.exports.getCurrentUser = (req, res) => {
-  res.send({ data: req.user });
+module.exports.getUsers = (req, res, next) => {
+  User.find({})
+    .then((users) => res.status(OK_STATUS).send(users))
+    .catch((err) => next(err));
 };
 
-module.exports.getUsers = async (req, res) => {
-  try {
-    const users = await User.find({});
-    return res.status(OK_STATUS).send({ data: users });
-  } catch (error) {
-    return res.status(INTERNAL_SERVER_ERROR).send({ message: 'Ошибка при запросе пользователей' });
-  }
+module.exports.getCurrentUserInfo = (req, res, next) => {
+  User.findOne({ _id: req.user._id }).orFail().then((users) => res.send(users)).catch((err) => {
+    next(err);
+  });
 };
 
-module.exports.getUser = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.userId).orFail();
-    res.send({ data: user });
-  } catch (err) {
-    if (err instanceof CastError) {
-      res.status(BAD_REQUEST).send({ message: `Передан некорректный ID пользователя: ${req.params.userId}` });
-      return;
-    }
-    if (err instanceof DocumentNotFoundError) {
-      res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${req.params.userId} не найден` });
-      return;
-    }
-    res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
-  }
+module.exports.getUser = (req, res, next) => {
+  User.findOne({ _id: req.params.userId }).orFail()
+    .then((users) => res.send(users)).catch((err) => {
+      if (err instanceof DocumentNotFoundError) {
+        next(new NotFound('Пользователь не найден'));
+      } else if (err instanceof CastError) {
+        next(new BadRequest('Переданы некорректные данные'));
+      } else {
+        next(err);
+      }
+    });
 };
 
-module.exports.updateUserInfo = async (req, res) => {
-  const userId = req.user._id;
+const updateUser = (req, res, next, data) => {
+  User.findOneAndUpdate({ _id: req.user._id }, data, {
+    new: true,
+    runValidators: true,
+  }).orFail()
+    .then((user) => res.status(OK_STATUS).send(user))
+    .catch((err) => {
+      if (err instanceof DocumentNotFoundError) {
+        next(new NotFound('Пользователь не найден'));
+      } else if (err instanceof ValidationError) {
+        next(new BadRequest('Переданы некорректные данные'));
+      } else {
+        next(err);
+      }
+    });
+};
+
+module.exports.updateUser = (req, res, next) => {
   const { name, about } = req.body;
 
-  try {
-    const user = await User.findByIdAndUpdate(userId, { name, about }, { new: true, runValidators: true }).orFail();
-    res.status(OK_STATUS).send({ data: user });
-  } catch (err) {
-    if (err instanceof DocumentNotFoundError) {
-      res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${userId} не найден` });
-    } else if (err instanceof ValidationError) {
-      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обновления профиля' });
-    } else {
-      res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
-    }
-  }
+  return updateUser(req, res, next, { name, about });
 };
 
-module.exports.updateUserAvatar = async (req, res) => {
-  const userId = req.user._id;
+module.exports.updateUserAvatar = (req, res, next) => {
   const { avatar } = req.body;
 
-  try {
-    const user = await User.findByIdAndUpdate(userId, { avatar }, { new: true, runValidators: true }).orFail();
-    res.send({ data: user });
-  } catch (err) {
-    if (err instanceof DocumentNotFoundError) {
-      res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${userId} не найден` });
-    } else if (err instanceof ValidationError) {
-      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обновления аватара' });
-    } else {
-      res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
-    }
-  }
+  return updateUser(req, res, next, { avatar });
 };
