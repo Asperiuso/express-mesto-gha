@@ -1,25 +1,26 @@
 const { CastError, ValidationError, DocumentNotFoundError } = require('mongoose').Error;
 
 const {
-  BAD_REQUEST,
-  NOT_FOUND,
-  INTERNAL_SERVER_ERROR,
   OK_STATUS,
   OK_CREATED,
 } = require('../utils/constants');
 
 const Card = require('../models/card');
 
-module.exports.getCards = async (req, res) => {
+const BadRequest = require('../utils/errors/BadRequest');
+const NotFoundError = require('../utils/errors/NotFound');
+const PermissionDenied = require('../utils/errors/PermissionDenied');
+
+module.exports.getCards = async (req, res, next) => {
   try {
     const cards = await Card.find({});
     res.status(OK_STATUS).send({ data: cards });
-  } catch (error) {
-    res.status(INTERNAL_SERVER_ERROR).send({ message: 'Ошибка при запросе карточек' });
+  } catch (err) {
+    next(err);
   }
 };
 
-module.exports.createCard = async (req, res) => {
+module.exports.createCard = async (req, res, next) => {
   const { name, link } = req.body;
   const userId = req.user._id;
   try {
@@ -27,31 +28,41 @@ module.exports.createCard = async (req, res) => {
     res.status(OK_CREATED).send({ data: card });
   } catch (err) {
     if (err instanceof ValidationError) {
-      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе создания карточки' });
+      const badRequestError = new BadRequest('Некорректные данные в методе создания карточки');
+      res.status(badRequestError.statusCode).send({ message: badRequestError.message });
       return;
     }
-    res.status(INTERNAL_SERVER_ERROR).send({ message: err.name });
+    next(err);
   }
 };
 
-module.exports.removeCard = async (req, res) => {
+module.exports.removeCard = async (req, res, next) => {
   try {
-    const card = await Card.findByIdAndRemove(req.params.cardId).orFail();
+    const card = await Card.findById(req.params.cardId).orFail();
+    // Проверка, является ли текущий пользователь владельцем карточки
+    if (card.owner.toString() !== req.user._id.toString()) {
+      const permissionDeniedError = new PermissionDenied('У вас нет прав на удаление этой карточки');
+      res.status(permissionDeniedError.statusCode).send({ message: permissionDeniedError.message });
+      return;
+    }
+    await card.remove();
     res.status(OK_STATUS).send({ data: card });
   } catch (err) {
     if (err instanceof CastError) {
-      res.status(BAD_REQUEST).send({ message: `Передан некорректный ID карточки: ${req.params.cardId}` });
+      const badRequestError = new BadRequest(`Передан некорректный ID карточки: ${req.params.cardId}`);
+      res.status(badRequestError.statusCode).send({ message: badRequestError.message });
       return;
     }
     if (err instanceof DocumentNotFoundError) {
-      res.status(NOT_FOUND).send({ message: `Запрашиваемая карточка с ID ${req.params.cardId} не найдена` });
+      const notFoundError = new NotFoundError(`Запрашиваемая карточка с ID ${req.params.cardId} не найдена`);
+      res.status(notFoundError.statusCode).send({ message: notFoundError.message });
       return;
     }
-    res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
+    next(err);
   }
 };
 
-module.exports.likeCard = async (req, res) => {
+module.exports.likeCard = async (req, res, next) => {
   const userId = req.user._id;
   try {
     const card = await Card.findByIdAndUpdate(
@@ -62,18 +73,20 @@ module.exports.likeCard = async (req, res) => {
     res.status(OK_STATUS).send({ data: card });
   } catch (err) {
     if (err instanceof DocumentNotFoundError) {
-      res.status(NOT_FOUND).send({ message: `Запрашиваемая карточка с ID ${req.params.cardId} не найдена` });
+      const notFoundError = new NotFoundError(`Запрашиваемая карточка с ID ${req.params.cardId} не найдена`);
+      res.status(notFoundError.statusCode).send({ message: notFoundError.message });
       return;
     }
     if (err instanceof CastError) {
-      res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе проставления лайка' });
+      const badRequestError = new BadRequest('Некорректные данные в методе проставления лайка');
+      res.status(badRequestError.statusCode).send({ message: badRequestError.message });
       return;
     }
-    res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
+    next(err);
   }
 };
 
-module.exports.dislikeCard = async (req, res) => {
+module.exports.dislikeCard = async (req, res, next) => {
   const userId = req.user._id;
   try {
     const card = await Card.findByIdAndUpdate(
@@ -84,13 +97,17 @@ module.exports.dislikeCard = async (req, res) => {
     res.status(OK_STATUS).send({ data: card });
   } catch (err) {
     if (err instanceof DocumentNotFoundError) {
-      res.status(NOT_FOUND).send({ message: `Запрашиваемая карточка с ID ${req.params.cardId} не найдена` });
+      const notFoundError = new NotFoundError(`Запрашиваемая карточка с ID ${req.params.cardId} не найдена`);
+      res.status(notFoundError.statusCode).send({ message: notFoundError.message });
       return;
     }
     if (err instanceof CastError) {
-      res.status(BAD_REQUEST).send({ message: 'Некорректные данные для метода снятия лайка' });
+      const badRequestError = new BadRequest('Некорректные данные для метода снятия лайка');
+      res.status(badRequestError.statusCode).send({ message: badRequestError.message });
       return;
     }
-    res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
+    next(err);
   }
 };
+
+module.exports.handleError = require('../middlewares/error-handler');
