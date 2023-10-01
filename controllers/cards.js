@@ -1,5 +1,10 @@
 const { CastError, ValidationError, DocumentNotFoundError } = require('mongoose').Error;
-const { BAD_REQUEST, NOT_FOUND, INTERNAL_SERVER_ERROR } = require('../utils/constants');
+const {
+  BAD_REQUEST,
+  NOT_FOUND,
+  INTERNAL_SERVER_ERROR,
+  FORBIDDEN,
+} = require('../utils/constants');
 const Card = require('../models/card');
 
 module.exports.getCards = async (req, res) => {
@@ -29,18 +34,24 @@ module.exports.createCard = async (req, res) => {
 
 module.exports.removeCard = async (req, res) => {
   try {
-    const card = await Card.findByIdAndRemove(req.params.cardId).orFail();
-    res.send({ data: card });
+    const card = await Card.findById(req.params.cardId).orFail();
+
+    // Проверяем, что текущий пользователь является владельцем карточки
+    if (card.owner.toString() !== req.user._id) {
+      return res.status(FORBIDDEN).send({ message: 'У вас нет прав на удаление этой карточки' });
+    }
+
+    // Если проверка пройдена, удаляем карточку
+    const removedCard = await Card.findByIdAndRemove(req.params.cardId).orFail();
+    return res.send({ data: removedCard });
   } catch (err) {
     if (err instanceof CastError) {
-      res.status(BAD_REQUEST).send({ message: `Передан некорректный ID карточки: ${req.params.cardId}` });
-      return;
+      return res.status(BAD_REQUEST).send({ message: `Передан некорректный ID карточки: ${req.params.cardId}` });
     }
     if (err instanceof DocumentNotFoundError) {
-      res.status(NOT_FOUND).send({ message: `Запрашиваемая карточка с ID ${req.params.cardId} не найдена` });
-      return;
+      return res.status(NOT_FOUND).send({ message: `Запрашиваемая карточка с ID ${req.params.cardId} не найдена` });
     }
-    res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
+    return res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
   }
 };
 
