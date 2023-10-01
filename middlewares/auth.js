@@ -3,13 +3,11 @@ const { UNAUTHORIZED, SECRET_KEY } = require('../utils/constants');
 
 module.exports = (req, res, next) => {
   // Проверяем, есть ли токен в заголовках запроса
-  const { authorization } = req.headers;
+  const token = req.headers;
 
-  if (!authorization || !authorization.startsWith('Bearer ')) {
+  if (!token) {
     return res.status(UNAUTHORIZED).send({ message: 'Необходима авторизация' });
   }
-
-  const token = authorization.replace('Bearer ', '');
 
   let payload;
 
