@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { CastError, ValidationError, DocumentNotFoundError } = require('mongoose').Error;
+const { ValidationError, DocumentNotFoundError } = require('mongoose').Error;
 
 const User = require('../models/user');
 
@@ -66,45 +66,32 @@ module.exports.login = (req, res, next) => {
     .catch((err) => next(err));
 };
 
-module.exports.getUsers = async (req, res, next) => {
-  try {
-    const users = await User.find({});
-    res.status(OK_STATUS).send({ data: users });
-  } catch (err) {
-    next(err);
-  }
+module.exports.getUsers = (req, res, next) => {
+  User.find({})
+    .then((users) => res.status(OK_STATUS).send(users))
+    .catch((err) => next(err));
 };
 
-module.exports.getUser = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.params.userId).orFail();
-    res.status(OK_STATUS).send({ data: user });
-  } catch (err) {
-    if (err instanceof CastError) {
-      const badRequestError = new BadRequestError(`Передан некорректный ID пользователя: ${req.params.userId}`);
-      res.status(badRequestError.statusCode).send({ message: badRequestError.message });
-    } else if (err instanceof DocumentNotFoundError) {
-      const notFoundError = new NotFoundError(`Запрашиваемый пользователь c ID ${req.params.userId} не найден`);
-      res.status(notFoundError.statusCode).send({ message: notFoundError.message });
-    } else {
-      next(err);
-    }
+module.exports.getUser = (req, res, next) => {
+  let userId;
+  if (req.params.id) {
+    userId = req.params.id;
+  } else {
+    userId = req.user._id;
   }
-};
-
-module.exports.createUser = async (req, res, next) => {
-  const { name, about, avatar } = req.body;
-  try {
-    const user = await User.create({ name, about, avatar });
-    res.status(OK_CREATED).send({ data: user });
-  } catch (err) {
-    if (err instanceof ValidationError) {
-      const badRequestError = new BadRequestError('Некорректные данные в методе создания пользователя');
-      res.status(badRequestError.statusCode).send({ message: badRequestError.message });
-    } else {
-      next(err);
-    }
-  }
+  User.findById(userId)
+    .then((user) => {
+      if (!user) {
+        return next(new NotFoundError('Пользователь по указанному _id не найден'));
+      }
+      return res.status(OK_STATUS).send(user);
+    })
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        return next(new BadRequestError('Переданы некоректные данные'));
+      }
+      return next(err);
+    });
 };
 
 module.exports.updateUserInfo = async (req, res, next) => {
