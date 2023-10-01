@@ -6,7 +6,7 @@ const { celebrate, Joi } = require('celebrate');
 const { PORT = 3000, MONGODB_URI = 'mongodb://127.0.0.1:27017/mestodb' } = process.env;
 const app = express();
 const dotenv = require('dotenv');
-const usersRouter = require('./routes/users');
+
 const { NOT_FOUND, URL_PATTERN, INTERNAL_SERVER_ERROR } = require('./utils/constants');
 const auth = require('./middlewares/auth');
 const errorHandler = require('./middlewares/error-handler');
@@ -41,7 +41,7 @@ app.post('/signin', celebrate({
 
 app.use(auth);
 
-app.use('/users', usersRouter);
+app.use('/users', require('./routes/users'));
 app.use('/cards', require('./routes/cards'));
 
 app.use((err, req, res) => {
