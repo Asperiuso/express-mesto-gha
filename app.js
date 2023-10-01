@@ -10,7 +10,7 @@ const errorHandler = require('./middlewares/error-handler');
 const userRoute = require('./routes/users');
 const cardRoute = require('./routes/cards');
 const { createUser, login } = require('./controllers/users');
-// const { validationUser, validationLogin } = require('./utils/validation');
+const { validationUser, validationLogin } = require('./utils/validation');
 const NotFoundError = require('./utils/errors/NotFound');
 
 const app = express();
@@ -23,8 +23,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-app.post('/signin', login);
-app.post('/signup', createUser);
+app.post('/signin', validationLogin, login);
+app.post('/signup', validationUser, createUser);
 
 app.use(auth, userRoute);
 app.use(auth, cardRoute);
