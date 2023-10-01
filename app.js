@@ -9,7 +9,6 @@ const dotenv = require('dotenv');
 
 const { NOT_FOUND, URL_PATTERN, INTERNAL_SERVER_ERROR } = require('./utils/constants');
 const auth = require('./middlewares/auth');
-const errorHandler = require('./middlewares/error-handler');
 const { signin, signup } = require('./controllers/users');
 
 dotenv.config();
@@ -53,8 +52,6 @@ app.use((err, req, res) => {
 app.use((req, res) => {
   res.status(NOT_FOUND).send({ message: 'Путь не найден' });
 });
-
-app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Сервер работает на PORT: ${PORT}`);
