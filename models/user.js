@@ -7,8 +7,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     minlength: 2,
     maxlength: 30,
-    required: true,
     default: 'Жак-Ив Кусто',
+    validate: {
+      validator: ({ length }) => length >= 2 && length <= 30,
+    },
   },
   email: {
     type: String,
