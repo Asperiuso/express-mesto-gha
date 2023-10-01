@@ -1,6 +1,5 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { ValidationError, DocumentNotFoundError } = require('mongoose').Error;
 
 const User = require('../models/user');
 
@@ -94,46 +93,28 @@ module.exports.getUser = (req, res, next) => {
     });
 };
 
-module.exports.updateUserInfo = async (req, res, next) => {
-  const userId = req.user._id;
+module.exports.updateUserInfo = (req, res, next) => {
   const { name, about } = req.body;
-  try {
-    /* eslint-disable max-len */
-    const user = await User.findByIdAndUpdate(userId, { name, about }, { new: true, runValidators: true }).orFail();
-    /* eslint-enable max-len */
-    res.status(OK_STATUS).send({ data: user });
-  } catch (err) {
-    if (err instanceof DocumentNotFoundError) {
-      const notFoundError = new NotFoundError(`Запрашиваемый пользователь c ID ${userId} не найден`);
-      res.status(notFoundError.statusCode).send({ message: notFoundError.message });
-    } else if (err instanceof ValidationError) {
-      const badRequestError = new BadRequestError('Некорректные данные в методе обнавления профиля');
-      res.status(badRequestError.statusCode).send({ message: badRequestError.message });
-    } else {
-      next(err);
-    }
-  }
+  User.findByIdAndUpdate(req.user._id, { name, about }, { new: true, runValidators: true })
+    .then((user) => res.status(OK_STATUS).send(user))
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        return next(new BadRequestError('Переданы некорректные данные'));
+      }
+      return next(err);
+    });
 };
 
-module.exports.updateUserAvatar = async (req, res, next) => {
-  const userId = req.user._id;
+module.exports.updateUserAvatar = (req, res, next) => {
   const { avatar } = req.body;
-  try {
-    /* eslint-disable max-len */
-    const user = await User.findByIdAndUpdate(userId, { avatar }, { new: true, runValidators: true }).orFail();
-    /* eslint-enable max-len */
-    res.status(OK_STATUS).send({ data: user });
-  } catch (err) {
-    if (err instanceof DocumentNotFoundError) {
-      const notFoundError = new NotFoundError(`Запрашиваемый пользователь c ID ${userId} не найден`);
-      res.status(notFoundError.statusCode).send({ message: notFoundError.message });
-    } else if (err instanceof ValidationError) {
-      const badRequestError = new BadRequestError('Некорректные данные в методе обновления аватара');
-      res.status(badRequestError.statusCode).send({ message: badRequestError.message });
-    } else {
-      next(err);
-    }
-  }
+  User.findByIdAndUpdate(req.user._id, { avatar }, { new: true, runValidators: true })
+    .then((user) => res.status(OK_STATUS).send(user))
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        return next(new BadRequestError('Переданы некорректные данные'));
+      }
+      return next(err);
+    });
 };
 
 module.exports.handleError = require('../middlewares/error-handler');
