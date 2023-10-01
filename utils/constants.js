@@ -1,5 +1,5 @@
 const SECRET_KEY = 'YOUR_SECRET_KEY';
-const URL_PATTERN = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9._~:/?#[\]@!$&'()*+,;=]+#?$/;
+const URL_PATTERN = /^(https?:\/\/)(www\.)?([\w-.~:/?#[\]@!$&')(*+,;=]*\.?)*\.{1}[\w]{2,8}(\/([\w-.~:/?#[\]@!$&')(*+,;=])*)?/;
 
 module.exports = {
   BAD_REQUEST: 400,

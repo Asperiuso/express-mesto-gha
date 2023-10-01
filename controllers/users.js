@@ -32,7 +32,12 @@ module.exports.createUser = async (req, res) => {
       email,
       password: hashedPassword,
     });
-    res.status(OK_CREATED).send({ data: user });
+    res.status(OK_CREATED).send({
+      name: user.name,
+      about: user.about,
+      avatar: user.avatar,
+      email: user.email,
+    });
   } catch (err) {
     if (err.code === 11000) {
       // Обработка ошибки конфликта (пользователь с таким email уже существует)
