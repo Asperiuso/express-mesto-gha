@@ -49,11 +49,12 @@ app.use((req, res) => {
   res.status(NOT_FOUND).send({ message: 'Путь не найден' });
 });
 
-app.use(errorHandler);
 app.use(auth);
 
 app.use('/users', require('./routes/users'));
 app.use('/cards', require('./routes/cards'));
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Сервер работает на PORT: ${PORT}`);
