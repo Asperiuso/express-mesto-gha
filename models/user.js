@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
 const validator = require('validator'); // Подключаем модуль validator
-
-// Регулярное выражение для валидации URL
-const urlPattern = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9._~:/?#[\]@!$&'()*+,;=]+#?$/;
+const { URL_PATTERN } = require('../utils/constants');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -10,6 +8,7 @@ const userSchema = new mongoose.Schema({
     minlength: 2,
     maxlength: 30,
     required: true,
+    default: 'Жак-Ив Кусто',
   },
   email: {
     type: String,
@@ -17,7 +16,7 @@ const userSchema = new mongoose.Schema({
     unique: true, // Электронная почта должна быть уникальной
     validate: {
       // Используем валидатор для проверки формата электронной почты
-      validator: (value) => validator.isEmail(value),
+      validator: (email) => validator.isEmail(email),
       message: 'Некорректный формат email',
     },
   },
@@ -31,12 +30,14 @@ const userSchema = new mongoose.Schema({
     minlength: 2,
     maxlength: 30,
     required: true,
+    default: 'Исследователь',
   },
   avatar: {
     type: String,
     required: true,
+    default: 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
     validate: {
-      validator: (value) => urlPattern.test(value),
+      validator: (url) => URL_PATTERN.test(url),
       message: 'Некорректный формат ссылки на аватар',
     },
   },

@@ -1,17 +1,19 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { validationResult } = require('express-validator');
-const { CastError, DocumentNotFoundError } = require('mongoose').Error;
+const { CastError, ValidationError, DocumentNotFoundError } = require('mongoose').Error;
 const {
   BAD_REQUEST,
   NOT_FOUND,
   UNAUTHORIZED,
   INTERNAL_SERVER_ERROR,
+  SECRET_KEY,
+  OK_STATUS,
+  OK_CREATED,
 } = require('../utils/constants');
 
 const User = require('../models/user');
 
-module.exports.login = async (req, res) => {
+module.exports.signin = async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -21,7 +23,7 @@ module.exports.login = async (req, res) => {
       return res.status(UNAUTHORIZED).send({ message: 'Неправильные почта или пароль' });
     }
 
-    const token = jwt.sign({ _id: user._id }, '259f0c489d8b65197882c5faa2e5dcc026be7d1ecb88153c87e5ac53b09f392f', { expiresIn: '7d' });
+    const token = jwt.sign({ _id: user._id }, SECRET_KEY, { expiresIn: '7d' });
 
     res.cookie('jwt', token, {
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -35,6 +37,35 @@ module.exports.login = async (req, res) => {
   }
 };
 
+module.exports.signup = async (req, res) => {
+  const {
+    name,
+    about,
+    avatar,
+    email,
+    password,
+  } = req.body;
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hashedPassword,
+    });
+
+    return res.status(OK_CREATED).send({ data: user });
+  } catch (err) {
+    if (err instanceof ValidationError) {
+      return res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе создания пользователя' });
+    }
+    return res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
+  }
+};
+
 module.exports.getCurrentUser = (req, res) => {
   res.send({ data: req.user });
 };
@@ -42,7 +73,7 @@ module.exports.getCurrentUser = (req, res) => {
 module.exports.getUsers = async (req, res) => {
   try {
     const users = await User.find({});
-    return res.send({ data: users });
+    return res.status(OK_STATUS).send({ data: users });
   } catch (error) {
     return res.status(INTERNAL_SERVER_ERROR).send({ message: 'Ошибка при запросе пользователей' });
   }
@@ -65,46 +96,17 @@ module.exports.getUser = async (req, res) => {
   }
 };
 
-module.exports.createUser = async (req, res) => {
-  const {
-    name = 'Жак-Ив Кусто',
-    about = 'Исследователь',
-    avatar = 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
-    email,
-    password,
-  } = req.body;
-
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      name,
-      about,
-      avatar,
-      email,
-      password: hashedPassword,
-    });
-
-    return res.send({ data: user });
-  } catch (err) {
-    if (err instanceof validationResult) {
-      return res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе создания пользователя' });
-    }
-    return res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
-  }
-};
-
 module.exports.updateUserInfo = async (req, res) => {
   const userId = req.user._id;
   const { name, about } = req.body;
 
   try {
     const user = await User.findByIdAndUpdate(userId, { name, about }, { new: true, runValidators: true }).orFail();
-    res.send({ data: user });
+    res.status(OK_STATUS).send({ data: user });
   } catch (err) {
     if (err instanceof DocumentNotFoundError) {
       res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${userId} не найден` });
-    } else if (err instanceof validationResult) {
+    } else if (err instanceof ValidationError) {
       res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обновления профиля' });
     } else {
       res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });
@@ -122,7 +124,7 @@ module.exports.updateUserAvatar = async (req, res) => {
   } catch (err) {
     if (err instanceof DocumentNotFoundError) {
       res.status(NOT_FOUND).send({ message: `Запрашиваемый пользователь c ID ${userId} не найден` });
-    } else if (err instanceof validationResult) {
+    } else if (err instanceof ValidationError) {
       res.status(BAD_REQUEST).send({ message: 'Некорректные данные в методе обновления аватара' });
     } else {
       res.status(INTERNAL_SERVER_ERROR).send({ message: 'Запрос не может быть обработан' });

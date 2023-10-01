@@ -1,5 +1,6 @@
 const router = require('express').Router();
-const { body, param } = require('express-validator');
+const { celebrate, Joi } = require('celebrate');
+const { URL_PATTERN } = require('../utils/constants');
 const {
   getCards,
   createCard,
@@ -8,21 +9,31 @@ const {
   dislikeCard,
 } = require('../controllers/cards');
 
-// Middleware для валидации данных при создании карточки
-const validateCardData = [
-  body('name').isString().withMessage('Имя должно быть строкой'),
-  body('link').isURL().withMessage('Ссылка должна быть валидным URL'),
-];
-
-// Middleware для валидации параметра cardId
-const validateCardId = [
-  param('cardId').isMongoId().withMessage('Некорректный ID карточки'),
-];
-
 router.get('/', getCards);
-router.post('/', validateCardData, createCard);
-router.delete('/:cardId', validateCardId, removeCard);
-router.put('/:cardId/likes', validateCardId, likeCard);
-router.delete('/:cardId/likes', validateCardId, dislikeCard);
+
+router.post('/', celebrate({
+  body: Joi.object().keys({
+    name: Joi.string().required().min(2).max(30),
+    link: Joi.string().required().pattern(URL_PATTERN),
+  }),
+}), createCard);
+
+router.put('/:cardId/likes', celebrate({
+  params: Joi.object().keys({
+    cardId: Joi.string().length(24).hex().required(),
+  }),
+}), likeCard);
+
+router.delete('/:cardId/likes', celebrate({
+  params: Joi.object().keys({
+    cardId: Joi.string().length(24).hex().required(),
+  }),
+}), dislikeCard);
+
+router.delete('/:cardId', celebrate({
+  params: Joi.object().keys({
+    cardId: Joi.string().length(24).hex().required(),
+  }),
+}), removeCard);
 
 module.exports = router;
