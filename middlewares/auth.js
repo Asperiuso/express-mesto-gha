@@ -1,9 +1,8 @@
 const jwt = require('jsonwebtoken');
-const { UNAUTHORIZED, SECRET_KEY } = require('../utils/constants');
+const { SECRET_KEY, UNAUTHORIZED } = require('../utils/constants');
 
 module.exports = (req, res, next) => {
-  // Проверяем, есть ли токен в заголовках запроса
-  const token = req.headers;
+  const token = req.cookies.jwt;
 
   if (!token) {
     return res.status(UNAUTHORIZED).send({ message: 'Необходима авторизация' });
@@ -12,13 +11,11 @@ module.exports = (req, res, next) => {
   let payload;
 
   try {
-    // Пытаемся верифицировать токен
     payload = jwt.verify(token, SECRET_KEY);
   } catch (err) {
     return res.status(UNAUTHORIZED).send({ message: 'Необходима авторизация' });
   }
 
-  // Если токен верен, добавляем пейлоуд в объект запроса
   req.user = payload;
 
   return next();
