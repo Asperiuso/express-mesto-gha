@@ -13,7 +13,7 @@ module.exports.getCards = (req, res, next) => {
   Card.find({}).then((data) => res.status(OK_STATUS).send(data)).catch(next);
 };
 
-module.exports.deleteCard = (req, res, next) => {
+module.exports.removeCard = (req, res, next) => {
   Card.findById({ _id: req.params.cardId })
     .orFail()
     .then((data) => {
