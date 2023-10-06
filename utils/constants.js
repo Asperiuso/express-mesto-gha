@@ -1,4 +1,4 @@
-const SECRET_KEY = 'YOUR_SECRET_KEY';
+const { SECRET_KEY = 'YOUR_SECRET_KEY' } = process.env;
 const URL_PATTERN = /^(https?:\/\/)(www\.)?([\w-.~:/?#[\]@!$&')(*+,;=]*\.?)*\.{1}[\w]{2,8}(\/([\w-.~:/?#[\]@!$&')(*+,;=])*)?/;
 
 module.exports = {
