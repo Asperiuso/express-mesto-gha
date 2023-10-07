@@ -24,7 +24,7 @@ mongoose.connect(MONGODB_URI, {
 app.use(cors({
   origin: [
     'http://localhost:3001',
-    'https://api.mestox.nomoredomainsrocks.ru',
+    'https://mestox.nomoredomainsrocks.ru',
   ],
   credentials: true,
   methods: ['GET', 'PUT', 'POST', 'DELETE'],
