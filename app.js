@@ -25,6 +25,7 @@ app.use(cors({
   origin: [
     'http://localhost:3001',
     'https://mestox.nomoredomainsrocks.ru',
+    'http://mestox.nomoredomainsrocks.ru',
   ],
   credentials: true,
   methods: ['GET', 'PUT', 'POST', 'DELETE'],
